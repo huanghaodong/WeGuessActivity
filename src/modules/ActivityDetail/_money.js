@@ -1,15 +1,14 @@
 import React, { Component } from 'react';
-import { View, Text ,TouchableOpacity,StyleSheet,ListView,Image,ScrollView,Dimensions} from 'react-native';
+import { View, Text ,TouchableOpacity,StyleSheet,ListView,Image,ScrollView,Dimensions,ActivityIndicator} from 'react-native';
 import TopNav from '../../component/topNav';
 import HTTPBase from '../../network/http.js';
 import RaceMessage from '../../component/raceMessage';
 import RaceResult from '../../component/raceResult';
-import {format} from '../../method';
 
 const baseURI = 'http://m.weguess.cn/memberapi/api/WeChat/SearchActionByActionID';
 const getWinnerListURI = 'http://m.weguess.cn/memberapi/api/WeChat/GetWinnerList';
 var {height, width} = Dimensions.get('window');
-export default class Bee extends Component {
+export default class Money extends Component {
     constructor(props){
         super(props);
         this.state = {
@@ -20,14 +19,20 @@ export default class Bee extends Component {
             Code:'',
             raceTitle:'',
             raceOption:[{Option:'',BetCount:0},{Option:'',BetCount:0},{Option:'',BetCount:0}],
-            eachBee:0,
-            entryFee:0,
+            endTime:'',
+            PlayerCount:0,
+            eachMoney:0,
             data:[],
-            betInfo:{}
+            betInfo:{},
+            isHiddenFooter:false,
+            //上拉还能加载更多中奖用户
+            hasMorePageIndex:true
         }
         this._renderRaceResult = this._renderRaceResult.bind(this);
         this._renderHeader = this._renderHeader.bind(this);
         this._renderButton = this._renderButton.bind(this);
+        this._renderFooter = this._renderFooter.bind(this);
+        this.loadMore = this.loadMore.bind(this);
     }
     _renderRow(rowData,sectionID,rowID) {
         return(
@@ -47,26 +52,15 @@ export default class Bee extends Component {
             )
     }
     _renderHeader() {
-        const {raceTitle,raceOption,eachBee,entryFee} = this.state;
+        const {raceTitle,raceOption,endTime,PlayerCount,eachMoney} = this.state;
         return(
                 <View>
-                    <View>
-                        <View style={styles.titBarBox}>
-                            <Text style={styles.titBar}>{raceTitle}</Text>
-                        </View>
-                        <View style={styles.race}>
-                            {raceOption.map((value,index)=>(<View key={index} style={[styles.raceRow,value.IsRight?styles.bgBlue:{}]}>
-                                <Text>
-                                    <Text style={[{fontSize:15,color:'#333'},value.IsRight?styles.fontColorWhite:{}]}>{value.Option}</Text>
-                                    <Text style={[{fontSize:12,color:'grey'},value.IsRight?styles.fontColorWhite:{}]}>{'('+value.BetCount+'人)'}</Text>
-                                </Text>
-                                <View style={{flexDirection:'row',alignItems:'center'}}>
-                                    <Image style={styles.bee} source={require('../../img/bean.png')}/>
-                                    <Text style={[{fontSize:12,color:'grey'},value.IsRight?styles.fontColorWhite:{}]}>{format(entryFee*value.BetCount)}</Text>
-                                </View>               
-                            </View>))}
-                        </View>
-                    </View>
+                    <RaceMessage 
+                        raceTitle={raceTitle} 
+                        raceOption={raceOption}
+                        endTime={endTime}
+                        PlayerCount={PlayerCount}
+                    />
                     {this._renderRaceResult()}                    
                     {this._renderButton()}
                 </View>
@@ -80,7 +74,7 @@ export default class Bee extends Component {
         }
     }
     _renderButton() {
-        const {eachBee} = this.state;
+        const {eachMoney} = this.state;
         const order = dealStatus(this.state.betInfo).Order;
         if(order === 4){
             return(
@@ -91,7 +85,7 @@ export default class Bee extends Component {
         }else if(order === 6){
             return(
                      <View style={styles.eachBar}>
-                        <Text style={styles.eachBarText}>{'中奖名单:每人分得'+Math.ceil(eachBee)+'猜豆'}</Text>
+                        <Text style={styles.eachBarText}>{'中奖名单:每人分得'+Math.ceil(eachMoney)+'元'}</Text>
                     </View>
                 )
         }else if(order === 5){
@@ -135,18 +129,36 @@ export default class Bee extends Component {
                 )
         }
     }
+    _renderFooter() {
+        if(this.props.status === 3){
+            return(
+                <View>
+                    <Text style={styles.tips}>注：请以上中奖用户添加“众猜体育客服”微信号领取现金红包。</Text>
+                    <Text style={styles.tips}> 微信号：zctykf </Text>
+                    {this.state.isHiddenFooter ? null : <View>
+                                            <ActivityIndicator size="large"/>
+                                                </View>}
+                </View>
+                )
+        }else{
+            return(
+                    <Text style={styles.tips}>参与抢红包将扣除您3,888猜豆。</Text>
+                )
+        }
+    }
   render() {
     if(this.state.isload){
     return (
         <View style={styles.container}>
             <TopNav navigator={this.props.navigator} Code={this.state.Code}/>
             <ListView 
-                    dataSource={this.state.ds.cloneWithRows(dataFormat(this.state.data))}
+                    dataSource={this.state.ds}
                     renderRow={this._renderRow}
-                    initialListSize={10}
                     enableEmptySections={true}
-                    contentContainerStyle = {styles.list}
                     renderHeader = {this._renderHeader}
+                    renderFooter = {this._renderFooter}
+                    onEndReached={this.loadMore}
+                    onEndReachedThreshold={60}
                 />
         </View>
         )
@@ -166,13 +178,13 @@ export default class Bee extends Component {
     }
     HTTPBase.post(baseURI,params,headers).then((responseData)=>{
         const {Data} = responseData;
-        console.log(Data)
         this.setState({
             isload:true,
             Code:Data.Action.Code,
             raceTitle:Data.Question[0].Question,
             raceOption:Data.Question[0].Options,
-            entryFee:Data.Action.EntryFee,
+            endTime:Data.Action.EndTime,
+            PlayerCount:Data.Action.PlayerCount,
             betInfo:Data.BetInfo
         })
     }).catch((error) => {
@@ -187,10 +199,46 @@ export default class Bee extends Component {
         };
         HTTPBase.post(getWinnerListURI,params,headers).then((responseData)=>{
             const {Data} = responseData;
+            this.data = Data;
             this.setState({
-                data:Data,
-                eachBee:Data[0].WinLose
+                ds:this.state.ds.cloneWithRows(dataFormat(this.data)),
+                eachMoney:Data[0].WinLose
             })
+            //页面缓存请求的中奖列表的PageIndex
+            this.PageIndex = 1
+        })
+    }
+  }
+  loadMore() {
+    if(this.props.status === 3 && this.PageIndex && this.state.hasMorePageIndex){
+        console.log('触发loadmore')
+      this.setState({
+            isHiddenFooter: false
+        })
+      let params = {
+            "ActionID": this.props.ID,
+            "PageIndex":++this.PageIndex,
+            "PageSize":20
+        };
+      let headers = {
+        "QIC":"QIC",
+        "Authorization":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b3VyaXN0IjpmYWxzZSwiYWNjb3VudCI6IjEwMDYyNmMxLTRmMjUtNGNlYS1iODVhLTM2MTljNjQ5OTA3ZiIsImV4cCI6MTUwMTgxODEyNCwiaWF0IjoxNTAxODE3NTI0fQ.B_ENgERLJgOUXtXX9g8mxlLz-PZAldOyCcwGHysuOpM",
+    }
+        HTTPBase.post(getWinnerListURI,params,headers).then((responseData)=>{
+            const {Data} = responseData;
+            if(Data.length === 0){
+              this.setState({
+                hasMorePageIndex:false,
+                isHiddenFooter: true
+              })
+            }else{
+              // 拼接数据
+              this.data = this.data.concat(Data);
+              this.setState({
+                  ds:this.state.ds.cloneWithRows(dataFormat(this.data)),
+                  isHiddenFooter: true
+              })
+            }
         })
     }
   }
@@ -201,33 +249,6 @@ const styles = StyleSheet.create({
         flex:1,
         backgroundColor:'#fff'
     },    
-    titBarBox:{
-        height:36,
-        justifyContent:'center',
-        backgroundColor:'#f2f2f2',
-        paddingLeft:10,
-    },
-    titBar:{            
-        color:'#4c4c4c',
-        fontSize:14
-    },
-    race:{
-        height:62,
-        flexDirection:'row'
-    },
-    raceRow:{
-        flex:1,
-        borderColor:'#ccc',
-        borderWidth:1,
-        borderLeftWidth:0,
-        justifyContent:'center',
-        alignItems:'center'
-    },
-    bee:{
-        width:14,
-        height:14,
-        resizeMode:'stretch'
-    },
     eachBar:{
         height:42,
         backgroundColor:'#3a66b3',
@@ -277,15 +298,6 @@ const styles = StyleSheet.create({
         color:'#343434',
         fontSize:12,
         marginLeft:15
-    },
-     bgBlue:{
-        backgroundColor:'#3a66b3'
-    },
-    fontColorBlack:{
-        color:'#333'
-    },
-    fontColorWhite:{
-        color:'#fff'
     },
     tips:{
         fontSize:12,

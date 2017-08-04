@@ -135,6 +135,7 @@ export default class WeGuessActivityList extends Component {
         );
     }
     loadMore(value) {
+        console.log('触发列表页loadmore')
         this.setState({
             isHiddenFooter: false
         })

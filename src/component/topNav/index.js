@@ -1,9 +1,17 @@
 import React, { Component } from 'react';
-import { View, Image,Text ,TouchableOpacity,StyleSheet} from 'react-native';
+import { View, Image,Text ,TouchableOpacity,StyleSheet,InteractionManager} from 'react-native';
+import Help from '../help';
 
 export default class TopNav extends Component {
-    _onPress() {
-        this.props.navigator.pop();
+    _onPress() {   
+
+            this.props.navigator.pop();
+
+    }
+    helpButton() {
+        this.props.navigator.push({
+            component:Help
+        });
     }
     render() {
         return (
@@ -11,8 +19,8 @@ export default class TopNav extends Component {
                     <TouchableOpacity style={styles.left} onPress={this._onPress.bind(this)}>
                         <View style={styles.arrow}></View>
                     </TouchableOpacity>
-                    <Text style={styles.center}>20元现金红包(19期)</Text>
-                    <TouchableOpacity style={styles.right}>
+                    <Text style={styles.center}>{this.props.Code}</Text>
+                    <TouchableOpacity style={styles.right} onPress={this.helpButton.bind(this)}>
                         <Image style={styles.img} source={require('../../img/help.png')} />
                     </TouchableOpacity>
             </View>

@@ -1,9 +1,10 @@
-import React, { Component } from 'react';
+import React, { Component ,PureComponent} from 'react';
 import { View, Text ,StyleSheet} from 'react-native';
 import {format,timeFormat} from '../../method';
 
-export default class RaceMessage extends Component {
+export default class RaceMessage extends PureComponent {
   render() {
+    console.log('喂喂喂')
     const {raceTitle,raceOption,endTime,PlayerCount,eachMoney} = this.props;
     return (
       	<View>
@@ -11,9 +12,9 @@ export default class RaceMessage extends Component {
                 <Text style={styles.titBar}>{raceTitle}</Text>
             </View>
             <View style={styles.race}>
-                {raceOption.map((value,index)=>(<View key={index} style={styles.raceRow}>
-                    <Text>{value.Option}</Text>
-                    <Text>{value.BetCount+'人'}</Text>
+                {raceOption.map((value,index)=>(<View key={index} style={[styles.raceRow,value.IsRight?styles.bgBlue:{}]}>
+                    <Text style={value.IsRight?styles.fontColorWhite:styles.fontColorBlack}>{value.Option}</Text>
+                    <Text style={value.IsRight?styles.fontColorWhite:styles.fontColorBlack}>{value.BetCount+'人'}</Text>
                 </View>))}
             </View>
             <View style={styles.cutOffBox}>
@@ -60,5 +61,14 @@ const styles = StyleSheet.create({
         fontSize:13,
         color:'grey'
     },
+    bgBlue:{
+        backgroundColor:'#3a66b3'
+    },
+    fontColorBlack:{
+        color:'#333'
+    },
+    fontColorWhite:{
+        color:'#fff'
+    }
 })
 

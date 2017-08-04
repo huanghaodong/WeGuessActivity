@@ -69,7 +69,6 @@ HTTPBase.post = function(url, params, headers,paramsArray) {
         paramsKeyArray.forEach(key => paramsArray.push(key + '=' + params[key]));
     }
     return new Promise(function(resolve, reject) {
-        console.log(paramsArray)
         fetch(url, {
                 method: 'POST',
                 headers: {...headers,'Content-Type': 'application/x-www-form-urlencoded',},
